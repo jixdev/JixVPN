@@ -123,7 +123,6 @@ func handlePacket(pkt []byte, proxyAddr string) {
 	}
 	tcpHdrLenBytes := tcpHdrLen * 4
 	seqNum := binary.BigEndian.Uint32(pkt[ipHdrLen+4 : ipHdrLen+8])
-	ackNum := binary.BigEndian.Uint32(pkt[ipHdrLen+8 : ipHdrLen+12])
 	flags := pkt[ipHdrLen+13]
 	dataEnd := ipHdrLen + tcpHdrLenBytes
 	var data []byte
@@ -251,12 +250,6 @@ func readFromSocks(tc *tunConn, synPkt []byte) {
 	srcPort := tc.key.dstPort
 	dstPort := tc.key.srcPort
 
-	ipHdrLen := int((synPkt[0]&0x0F) * 4)
-	tcpHdrLen := int((synPkt[ipHdrLen+12]>>4)&0x0F) * 4
-
-	tcpTemplate := make([]byte, tcpHdrLen)
-	copy(tcpTemplate, synPkt[ipHdrLen:ipHdrLen+tcpHdrLen])
-
 	tc.mu.Lock()
 	tc.lastAck = tc.clientISN + 1
 	tc.mu.Unlock()
@@ -276,7 +269,7 @@ func readFromSocks(tc *tunConn, synPkt []byte) {
 		ack := tc.lastAck
 		tc.mu.Unlock()
 
-		pkt := buildIPPacket(srcIP, dstIP, srcPort, dstPort, data, serverSeq, ack, tcpTemplate)
+		pkt := buildIPPacket(srcIP, dstIP, srcPort, dstPort, data, serverSeq, ack)
 		serverSeq += uint32(n)
 
 		if tunW != nil {
@@ -285,7 +278,7 @@ func readFromSocks(tc *tunConn, synPkt []byte) {
 	}
 }
 
-func buildIPPacket(srcIP, dstIP net.IP, srcPort, dstPort uint16, data []byte, seq, ack uint32, tcpTemplate []byte) []byte {
+func buildIPPacket(srcIP, dstIP net.IP, srcPort, dstPort uint16, data []byte, seq, ack uint32) []byte {
 	totalLen := 20 + 20 + len(data)
 	pkt := make([]byte, totalLen)
 

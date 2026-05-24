@@ -37,6 +37,7 @@ jobs:
       - name: Build gotun
         run: |
           cd gotun
+          go mod tidy
           GOOS=android GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o ../app/src/main/assets/gotun-arm64 .
 
       - name: Download mihomo
