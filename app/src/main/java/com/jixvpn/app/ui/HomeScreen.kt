@@ -77,10 +77,7 @@ fun HomeScreen(onNavigateToNodes: () -> Unit) {
             Spacer(Modifier.height(24.dp))
 
             if (isDownloading) {
-                LinearProgressIndicator(
-                    progress = downloadProgress / 15f,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 Text("下载配置中... $downloadProgress/15", modifier = Modifier.padding(top = 8.dp))
             } else {
                 Button(
