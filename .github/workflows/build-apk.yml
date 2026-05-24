@@ -1,0 +1,61 @@
+name: Build JixVPN
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Setup Android SDK
+        run: |
+          mkdir -p $ANDROID_HOME/cmdline-tools
+          curl -sL -o cmdline-tools.zip "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip"
+          unzip -q cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools/
+          mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "platforms;android-34" "build-tools;34.0.0" > /dev/null 2>&1 || true
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+
+      - name: Build gotun
+        run: |
+          cd gotun
+          GOOS=android GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o ../app/src/main/assets/gotun-arm64 .
+
+      - name: Download mihomo
+        run: |
+          curl -sL -o mihomo.gz "https://github.com/MetaCubeX/mihomo/releases/download/v1.19.25/mihomo-android-arm64-v8-v1.19.25.gz"
+          gunzip -c mihomo.gz > app/src/main/assets/mihomo-arm64
+          chmod +x app/src/main/assets/mihomo-arm64
+          ls -lh app/src/main/assets/
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: "8.5"
+
+      - name: Build APK
+        run: gradle assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: JixVPN
+          path: app/build/outputs/apk/debug/app-debug.apk
