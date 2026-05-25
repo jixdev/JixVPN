@@ -3,6 +3,30 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+val mihomoVersion = "v1.19.25"
+val assetsDir = file("src/main/assets")
+
+task("downloadMihomo") {
+    val outputFile = File(assetsDir, "mihomo-arm64")
+    doLast {
+        if (!outputFile.exists()) {
+            val url = java.net.URL("https://github.com/MetaCubeX/mihomo/releases/download/$mihomoVersion/mihomo-android-arm64-v8-$mihomoVersion.gz")
+            println("Downloading mihomo from $url ...")
+            url.openStream().use { input ->
+                java.util.zip.GZIPInputStream(input).use { gzip ->
+                    outputFile.outputStream().use { output -> gzip.copyTo(output) }
+                }
+            }
+            outputFile.setExecutable(true)
+            println("mihomo downloaded: ${outputFile.length()} bytes")
+        }
+    }
+}
+
+tasks.matching { it.name.startsWith("merge") && it.name.endsWith("Assets") }.configureEach {
+    dependsOn("downloadMihomo")
+}
+
 android {
     namespace = "com.jixvpn.app"
     compileSdk = 34
